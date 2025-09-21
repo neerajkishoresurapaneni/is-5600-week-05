@@ -2,57 +2,73 @@
 const cuid = require('cuid')
 const db = require('./db')
 
-// Define schema differently (rename fields slightly)
-const OrderSchema = new db.Schema({
+const Order = db.model('Order', {
   _id: { type: String, default: cuid },
-  email: { type: String, required: true }, // buyerEmail → email
-  items: [{ // products → items
+  buyerEmail: { type: String, required: true },
+  products: [{
     type: String,
     ref: 'Product',
+    index: true,
     required: true
   }],
-  state: { // status → state
+  status: {
     type: String,
-    default: 'NEW',
-    enum: ['NEW', 'PROCESSING', 'FINISHED']
+    index: true,
+    default: 'CREATED',
+    enum: ['CREATED', 'PENDING', 'COMPLETED']
   }
 })
 
-const OrderModel = db.model('Order', OrderSchema)
+// ---------- CRUD Methods ----------
 
-// CRUD
-async function createOrder(input) {
-  const order = new OrderModel(input)
+// List Orders
+async function list(options = {}) {
+  const { offset = 0, limit = 25, productId, status } = options
+  const productQuery = productId ? { products: productId } : {}
+  const statusQuery = status ? { status } : {}
+
+  const query = { ...productQuery, ...statusQuery }
+
+  const orders = await Order.find(query)
+    .sort({ _id: 1 })
+    .skip(offset)
+    .limit(limit)
+
+  return orders
+}
+
+// Get Order by ID (with products populated)
+async function get(_id) {
+  return await Order.findById(_id).populate('products').exec()
+}
+
+// Create Order
+async function create(fields) {
+  const order = await new Order(fields).save()
+  await order.populate('products')
+  return order
+}
+
+// Edit Order
+async function edit(_id, change) {
+  const order = await get(_id)
+  Object.keys(change).forEach(key => {
+    order[key] = change[key]
+  })
   await order.save()
-  return await order.populate('items')
+  return order
 }
 
-async function listOrders({ skip = 0, size = 20, productId, state } = {}) {
-  const filters = {}
-  if (productId) filters.items = productId
-  if (state) filters.state = state
-  return await OrderModel.find(filters)
-    .sort({ _id: -1 })
-    .skip(skip)
-    .limit(size)
+// Delete Order
+async function destroy(_id) {
+  return await Order.deleteOne({ _id })
 }
 
-async function getOrder(id) {
-  return await OrderModel.findById(id).populate('items').exec()
-}
-
-async function editOrder(id, data) {
-  return await OrderModel.findByIdAndUpdate(id, data, { new: true })
-}
-
-async function deleteOrder(id) {
-  return await OrderModel.deleteOne({ _id: id })
-}
-
+// Exports
 module.exports = {
-  createOrder,
-  listOrders,
-  getOrder,
-  editOrder,
-  deleteOrder
+  list,
+  get,
+  create,
+  edit,
+  destroy
 }

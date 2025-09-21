@@ -1,64 +1,92 @@
 // api.js
-const express = require("express");
-const router = express.Router();
-const Product = require("./products");
+const Products = require('./products')
+const Orders = require('./orders')
 
-// ✅ Create product (POST /products)
-router.post("/products", async (req, res) => {
-  try {
-    const newProduct = await Product.create(req.body);
-    res.status(201).json(newProduct);
-  } catch (error) {
-    console.error("Error creating product:", error.message);
-    res.status(400).json({ error: error.message });
-  }
-});
+// ---------- Product Handlers ----------
 
-// ✅ Get all products (GET /products)
-router.get("/products", async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.status(200).json(products);
-  } catch (error) {
-    res.status(500).json({ error: "Error fetching products" });
-  }
-});
+// Create Product
+async function createProduct(req, res, next) {
+  const product = await Products.create(req.body)
+  res.json(product)
+}
 
-// ✅ Get single product by ID (GET /products/:id)
-router.get("/products/:id", async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ error: "Product not found" });
-    res.status(200).json(product);
-  } catch (error) {
-    res.status(400).json({ error: "Invalid ID format" });
-  }
-});
+// List Products
+async function listProducts(req, res, next) {
+  const { offset = 0, limit = 25, tag } = req.query
+  const products = await Products.list({ 
+    offset: Number(offset), 
+    limit: Number(limit), 
+    tag 
+  })
+  res.json(products)
+}
 
-// ✅ Update product (PUT /products/:id)
-router.put("/products/:id", async (req, res) => {
-  try {
-    const updatedProduct = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-    if (!updatedProduct) return res.status(404).json({ error: "Product not found" });
-    res.status(200).json(updatedProduct);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
+// Get Product
+async function getProduct(req, res, next) {
+  const product = await Products.get(req.params.id)
+  res.json(product)
+}
 
-// ✅ Delete product (DELETE /products/:id)
-router.delete("/products/:id", async (req, res) => {
-  try {
-    const deletedProduct = await Product.findByIdAndDelete(req.params.id);
-    if (!deletedProduct) return res.status(404).json({ error: "Product not found" });
-    res.status(200).json({ message: "Product deleted successfully" });
-  } catch (error) {
-    res.status(400).json({ error: "Invalid ID format" });
-  }
-});
+// Edit Product
+async function editProduct(req, res, next) {
+  const product = await Products.edit(req.params.id, req.body)
+  res.json(product)
+}
 
-module.exports = router;
+// Delete Product
+async function deleteProduct(req, res, next) {
+  const result = await Products.destroy(req.params.id)
+  res.json(result)
+}
+
+// ---------- Order Handlers ----------
+
+// Create Order
+async function createOrder(req, res, next) {
+  const order = await Orders.create(req.body)
+  res.json(order)
+}
+
+// List Orders
+async function listOrders(req, res, next) {
+  const { offset = 0, limit = 25, productId, status } = req.query
+  const orders = await Orders.list({ 
+    offset: Number(offset), 
+    limit: Number(limit), 
+    productId, 
+    status 
+  })
+  res.json(orders)
+}
+
+// Get Order
+async function getOrder(req, res, next) {
+  const order = await Orders.get(req.params.id)
+  res.json(order)
+}
+
+// Edit Order
+async function editOrder(req, res, next) {
+  const order = await Orders.edit(req.params.id, req.body)
+  res.json(order)
+}
+
+// Delete Order
+async function deleteOrder(req, res, next) {
+  const result = await Orders.destroy(req.params.id)
+  res.json(result)
+}
+
+// Exports
+module.exports = {
+  createProduct,
+  listProducts,
+  getProduct,
+  editProduct,
+  deleteProduct,
+  createOrder,
+  listOrders,
+  getOrder,
+  editOrder,
+  deleteOrder
+}
