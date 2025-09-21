@@ -1,24 +1,38 @@
-const express = require('express')
-const api = require('./api')
-const middleware = require('./middleware')
-const bodyParser = require('body-parser')
+const express = require("express");
+const mongoose = require("mongoose");
+const cors = require("cors");
 
+// Import routes
+const productRoutes = require("./products");
+const orderRoutes = require("./api"); // assuming orders are inside api.js
 
-// Set the port
-const port = process.env.PORT || 3000
-// Boot the app
-const app = express()
-// Register the public directory
-app.use(express.static(__dirname + '/public'));
-// register the routes
-app.use(bodyParser.json())
-app.use(middleware.cors)
-app.get('/', api.handleRoot)
-app.get('/products', api.listProducts)
-app.get('/products/:id', api.getProduct)
-app.put('/products/:id', api.editProduct)
-app.delete('/products/:id', api.deleteProduct)
-app.post('/products', api.createProduct)
-// Boot the server
-app.listen(port, () => console.log(`Server listening on port ${port}`))
+const app = express();
+const PORT = process.env.PORT || 3000;
 
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// ✅ Root route (so you don’t see "Cannot GET /")
+app.get("/", (req, res) => {
+  res.send("✅ API is running! Use /products or /orders");
+});
+
+// Routes
+app.use("/products", productRoutes);
+app.use("/orders", orderRoutes);
+
+// MongoDB Connection
+mongoose
+  .connect("mongodb://127.0.0.1:27017/lab05", {
+    // Note: useNewUrlParser & useUnifiedTopology are no longer needed in v6+
+  })
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running at http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ MongoDB connection error:", err);
+  });
